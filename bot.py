@@ -5,6 +5,7 @@ import time
 import re
 import uuid
 from datetime import datetime, timedelta, date
+from zoneinfo import ZoneInfo
 from typing import Optional, Tuple, List
 
 import gspread
@@ -49,6 +50,14 @@ DEFAULT_DAYS_AHEAD = int(os.getenv("DEFAULT_DAYS_AHEAD", "10"))
 TIME_STEP_MIN = 30              # Крок зміни часу (кнопки + / -)
 REMIND_HOUR_BEFORE = 18         # Нагадування за день о 18:00
 MORNING_REMIND_HOUR = 8         # Нагадування в день зміни
+
+KYIV_TZ = ZoneInfo("Europe/Kyiv")
+
+def now_kyiv():
+    return datetime.now(KYIV_TZ)
+
+def today_kyiv():
+    return now_kyiv().date()
 
 # --------------------- VALIDATION -------------------------
 if not TELEGRAM_TOKEN:
@@ -219,7 +228,7 @@ def jobqueue_load_all(app):
     """Перечитує всі задачі з таблиці при запуску бота
        і запускає їх у job_queue повторно."""
     rows = jobqueue_ws.get_all_records()
-    now = datetime.now()
+    now = now_kyiv()
 
     for r in rows:
         if r.get("done", "no") == "yes":
@@ -323,7 +332,7 @@ def build_shifts_keyboard_by_city(city: str, days_ahead: Optional[int] = None):
     except Exception:
         limit = 10
 
-    today = datetime.now().date()
+    today = today_kyiv()
     start_day = today + timedelta(days=1)   # показуємо з завтрашнього дня
     last_day  = today + timedelta(days=limit)
 
@@ -406,7 +415,7 @@ def _month_days(year: int, month: int):
     return first_weekday, days_count  # Пн=0 ... Нд=6
 
 def build_calendar(year: int = None, month: int = None):
-    today = date.today()
+    today = today_kyiv()
     if year is None: year = today.year
     if month is None: month = today.month
 
@@ -436,7 +445,7 @@ def build_calendar(year: int = None, month: int = None):
 # ===================== Календар для бронювання з виділенням змін =====================
 
 def build_booking_calendar(city: str, year: int = None, month: int = None):
-    today = date.today()
+    today = today_kyiv()
     if year is None: year = today.year
     if month is None: month = today.month
 
@@ -1257,11 +1266,11 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     pass
 
             if d:
-                now = datetime.now()
+                now = now_kyiv()
 
                 # ---------- 1) Нагадування за день (18:00) ----------
                 day_before_dt = datetime(
-                    d.year, d.month, d.day, REMIND_HOUR_BEFORE, 0
+                    d.year, d.month, d.day, REMIND_HOUR_BEFORE, 0, tzinfo=KYIV_TZ
                 ) - timedelta(days=1)
 
                 if day_before_dt > now:
@@ -1303,7 +1312,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 except:
                     sh, sm = 9, 0
 
-                start_dt = datetime(d.year, d.month, d.day, sh, sm)
+                start_dt = datetime(d.year, d.month, d.day, sh, sm, tzinfo=KYIV_TZ)
 
                 if start_dt > now:
                     job_id = jobqueue_add(
