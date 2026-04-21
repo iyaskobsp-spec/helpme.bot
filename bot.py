@@ -938,9 +938,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
-    print(f"[debug] callback_data = {data}")
-    await update.effective_chat.send_message(f"DEBUG callback: {data}")
-    return
+    print(f"[debug] callback_data = {data}")    
     
     # --- Меню створення зміни ---
     if data == "menu:want_trip":
