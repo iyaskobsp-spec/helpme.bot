@@ -1536,12 +1536,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             await update.effective_message.edit_text(
                 f"✅ Дату оновлено: {dd}"
-            )
-
-            await update.effective_chat.send_message(
-                "Меню доступне внизу 👇",
-                reply_markup=stable_menu_keyboard()
-            )
+            )            
             return
 
         if context.user_data.get("mode") == "want_trip":
@@ -1720,12 +1715,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             await update.effective_message.edit_text(
                 f"✅ Час оновлено: {new_time_from}–{new_time_to}"
-            )
-
-            await update.effective_chat.send_message(
-                "Меню доступне внизу 👇",
-                reply_markup=stable_menu_keyboard()
-            )
+            )            
             return
            
     if data.startswith("tend:"):
