@@ -1263,6 +1263,39 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    if data.startswith("editrec_time:"):
+        row_idx = int(data.split(":", 1)[1])
+        records = get_my_created_records(update.effective_user.id)
+        rec = next((r for r in records if r["row_idx"] == row_idx), None)
+
+        if not rec:
+            await update.effective_message.edit_text(
+                "Запис не знайдено або він уже неактивний."
+            )
+            return
+
+        context.user_data["edit_mode"] = "time"
+        context.user_data["edit_row_idx"] = row_idx
+
+        try:
+            start_h, start_m = map(int, rec["time_from"].split(":"))
+        except Exception:
+            start_h, start_m = 9, 0
+
+        try:
+            end_h, end_m = map(int, rec["time_to"].split(":"))
+        except Exception:
+            end_h, end_m = 18, 0
+
+        context.user_data["edit_time_to_default_h"] = end_h
+        context.user_data["edit_time_to_default_m"] = end_m
+
+        await update.effective_message.edit_text(
+            "Оберіть новий час з:",
+            reply_markup=build_time_picker("edit_time_from", start_h, start_m, label="Час з")
+        )
+        return    
+
     if data.startswith("editrec_date:"):
         row_idx = int(data.split(":", 1)[1])
         records = get_my_created_records(update.effective_user.id)
@@ -1563,7 +1596,39 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=kb
             )
             return    
-    # Час початку
+    # Час початку і редагув.часу
+    if data.startswith("edit_time_from:"):
+        _, action, hh, mm = data.split(":")
+        h, m = _parse_hm(hh, mm)
+
+        if action == "inc":
+            h, m = _inc_time(h, m)
+            await update.effective_message.edit_text(
+                "Оберіть новий час з:",
+                reply_markup=build_time_picker("edit_time_from", h, m, label="Час з")
+            )
+            return
+
+        if action == "dec":
+            h, m = _dec_time(h, m)
+            await update.effective_message.edit_text(
+                "Оберіть новий час з:",
+                reply_markup=build_time_picker("edit_time_from", h, m, label="Час з")
+            )
+            return
+
+        if action == "ok":
+            context.user_data["edit_time_from"] = _time_to_str(h, m)
+
+            end_h = context.user_data.get("edit_time_to_default_h", 18)
+            end_m = context.user_data.get("edit_time_to_default_m", 0)
+
+            await update.effective_message.edit_text(
+                f"Час з: {context.user_data['edit_time_from']}\nОберіть новий час по:",
+                reply_markup=build_time_picker("edit_time_to", end_h, end_m, label="Час по")
+            )
+            return
+    
     if data.startswith("tstart:"):
         _, action, hh, mm = data.split(":")
         h, m = _parse_hm(hh, mm)
@@ -1616,8 +1681,58 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "✍️ Введіть коментар до заявки або натисніть «Пропустити».",
                 reply_markup=kb
             )
-            return  
-        
+            return
+
+    if data.startswith("edit_time_to:"):
+        _, action, hh, mm = data.split(":")
+        h, m = _parse_hm(hh, mm)
+
+        if action == "inc":
+            h, m = _inc_time(h, m)
+            await update.effective_message.edit_text(
+                "Оберіть новий час по:",
+                reply_markup=build_time_picker("edit_time_to", h, m, label="Час по")
+            )
+            return
+
+        if action == "dec":
+            h, m = _dec_time(h, m)
+            await update.effective_message.edit_text(
+                "Оберіть новий час по:",
+                reply_markup=build_time_picker("edit_time_to", h, m, label="Час по")
+            )
+            return
+
+        if action == "ok":
+            row_idx = context.user_data.get("edit_row_idx")
+
+            if not row_idx:
+                context.user_data.pop("edit_mode", None)
+                await update.effective_message.edit_text("❌ Не знайдено запис для редагування.")
+                return
+
+            new_time_from = context.user_data.get("edit_time_from", "")
+            new_time_to = _time_to_str(h, m)
+
+            requests_ws.update_cell(row_idx, COL_TIME_FROM, new_time_from)
+            requests_ws.update_cell(row_idx, COL_TIME_TO, new_time_to)
+
+            context.user_data.pop("edit_mode", None)
+            context.user_data.pop("edit_row_idx", None)
+            context.user_data.pop("edit_time_from", None)
+            context.user_data.pop("edit_time_to_default_h", None)
+            context.user_data.pop("edit_time_to_default_m", None)
+
+            await update.effective_message.edit_text(
+                f"✅ Час оновлено: {new_time_from}–{new_time_to}"
+            )
+
+            await update.effective_chat.send_message(
+                "Меню доступне внизу 👇",
+                reply_markup=stable_menu_keyboard()
+            )
+            return
+           
     if data.startswith("tend:"):
         _, action, hh, mm = data.split(":")
         h, m = _parse_hm(hh, mm)
