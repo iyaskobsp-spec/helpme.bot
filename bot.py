@@ -765,9 +765,33 @@ async def handle_create_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if update.message is None:
         return
     step = context.user_data.get("await")
-    txt = (update.message.text or "").strip()   
-  
+    txt = (update.message.text or "").strip()
 
+    if step == "edit_note":
+        row_idx = context.user_data.get("edit_row_idx")
+
+        if not row_idx:
+            context.user_data.pop("await", None)
+            await update.message.reply_text("❌ Не знайдено запис для редагування.")
+            return
+
+        new_note = "" if txt in ("-", "—") else txt
+
+        requests_ws.update_cell(row_idx, COL_NOTE, new_note)
+
+        context.user_data.pop("await", None)
+        context.user_data.pop("edit_row_idx", None)
+
+        await update.message.reply_text(
+            "✅ Коментар оновлено."
+        )
+
+        await update.message.reply_text(
+            "Меню доступне внизу 👇",
+            reply_markup=stable_menu_keyboard()
+        )
+        return  
+  
     if step == "trip_comment":
         context.user_data["trip_comment"] = txt
         context.user_data.pop("await", None)
@@ -1207,6 +1231,26 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.effective_message.edit_text(
             "Що саме хочете змінити?",
             reply_markup=InlineKeyboardMarkup(buttons)
+        )
+        return
+
+    if data.startswith("editrec_note:"):
+        row_idx = int(data.split(":", 1)[1])
+        records = get_my_created_records(update.effective_user.id)
+        rec = next((r for r in records if r["row_idx"] == row_idx), None)
+
+        if not rec:
+            await update.effective_message.edit_text(
+                "Запис не знайдено або він уже неактивний."
+            )
+            return
+
+        context.user_data["await"] = "edit_note"
+        context.user_data["edit_row_idx"] = row_idx
+
+        await update.effective_message.edit_text(
+            "Введіть новий коментар.\n\n"
+            "Якщо хочете прибрати коментар зовсім, надішліть: -"
         )
         return
     
