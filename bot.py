@@ -938,7 +938,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
-      
+    print(f"[debug] callback_data = {data}")      
     
     # --- Меню створення зміни ---
     if data == "menu:want_trip":
@@ -1530,6 +1530,12 @@ async def job_ask_arrival(context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             pass
 
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
+    import traceback
+    print("========== ERROR START ==========")
+    print(f"update = {update}")
+    print("".join(traceback.format_exception(None, context.error, context.error.__traceback__)))
+    print("=========== ERROR END ===========")
 
 def main():
     app = Application.builder().token(TELEGRAM_TOKEN).build()
@@ -1543,6 +1549,7 @@ def main():
     app.add_handler(CallbackQueryHandler(on_callback))
     app.add_handler(MessageHandler(filters.CONTACT, on_contact_create))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_create_text))
+    app.add_error_handler(error_handler)
 
     # Persistent JobQueue
     jobqueue_load_all(app)
