@@ -671,9 +671,19 @@ async def handle_create_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
     step = context.user_data.get("await")
     txt = (update.message.text or "").strip()
+    
+    if step == "trip_comment":
+        context.user_data["trip_comment"] = txt
+        context.user_data.pop("await", None)
 
-
-
+        await update.message.reply_text(
+            "✅ Заявку заповнено.\n"
+            f"ТТ працівника: {context.user_data.get('worker_store', '')}\n"
+            f"Дата: {datetime.strptime(context.user_data['trip_date'], '%Y-%m-%d').strftime('%d.%m.%Y')}\n"
+            f"Час: {context.user_data.get('trip_time_from', '')}–{context.user_data.get('trip_time_to', '')}\n"
+            f"Коментар: {context.user_data.get('trip_comment', '')}"
+        )
+        return
     
     if step == "worker_store":
         worker_store = re.sub(r"\D", "", txt)
@@ -986,6 +996,19 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Наступним кроком додамо список ваших активних записів."
         )
         return
+
+    if data == "trip_comment_skip":
+        context.user_data["trip_comment"] = ""
+        context.user_data.pop("await", None)
+
+        await update.effective_message.edit_text(
+            "✅ Заявку заповнено.\n"
+            f"ТТ працівника: {context.user_data.get('worker_store', '')}\n"
+            f"Дата: {datetime.strptime(context.user_data['trip_date'], '%Y-%m-%d').strftime('%d.%m.%Y')}\n"
+            f"Час: {context.user_data.get('trip_time_from', '')}–{context.user_data.get('trip_time_to', '')}\n"
+            "Коментар: —"
+        )
+        return    
     
     if data == "menu:create":
         keep_phone = context.user_data.get("creator_phone")
@@ -1217,13 +1240,18 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if action == "ok":
             context.user_data["trip_time_to"] = _time_to_str(h, m)
+            context.user_data["await"] = "trip_comment"
+
+            kb = InlineKeyboardMarkup([
+                [InlineKeyboardButton("Пропустити", callback_data="trip_comment_skip")]
+            ])
+
             await update.effective_message.edit_text(
-                "✅ Час для заявки збережено.\n"
-                f"Дата: {datetime.strptime(context.user_data['trip_date'], '%Y-%m-%d').strftime('%d.%m.%Y')}\n"
-                f"Час: {context.user_data['trip_time_from']}–{context.user_data['trip_time_to']}"
+                "✍️ Введіть коментар до заявки або натисніть «Пропустити».",
+                reply_markup=kb
             )
-            return
-    
+            return  
+        
     if data.startswith("tend:"):
         _, action, hh, mm = data.split(":")
         h, m = _parse_hm(hh, mm)
