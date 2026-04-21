@@ -638,6 +638,13 @@ async def on_contact_create(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await show_my_attendance(update, context)
         return
 
+        # --- Якщо чекали телефон для заявки "Хочу у відрядження" ---
+    if context.user_data.pop("await_want_trip_phone", False):
+        context.user_data["mode"] = "want_trip"
+        context.user_data["await"] = "worker_store"
+        await update.message.reply_text("📍 Тепер вкажіть номер ТТ, де ви працюєте зараз:")
+        return
+
     # --- Якщо чекали телефон для бронювання ---
     pending_row = context.user_data.pop("pending_book_row", None)
     if pending_row:
@@ -665,7 +672,21 @@ async def handle_create_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
     step = context.user_data.get("await")
     txt = (update.message.text or "").strip()
 
+    if step == "worker_store":
+        worker_store = re.sub(r"\D", "", txt)
 
+        if not worker_store:
+            await update.message.reply_text("Вкажіть номер ТТ цифрами, наприклад: 054")
+            return
+
+        context.user_data["worker_store"] = worker_store
+        context.user_data.pop("await", None)
+
+        await update.message.reply_text(
+            f"✅ ТТ працівника збережено: {worker_store}"
+        )
+        return
+        
     if step == "emp_name":
         parts = txt.split()
 
@@ -920,12 +941,39 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # --- Меню створення зміни ---
     if data == "menu:want_trip":
-        await update.effective_message.edit_text(
-            "✅ Кнопку «Хочу у відрядження» підключено.\n"
-            "Наступним кроком додамо сам сценарій заявки."
-        )
-        return
+        keep_phone = context.user_data.get("creator_phone")
+        keep_name  = context.user_data.get("emp_name")
+        keep_tg    = context.user_data.get("creator_tg") or update.effective_user.id
 
+        context.user_data.clear()
+        if keep_phone:
+            context.user_data["creator_phone"] = keep_phone
+        if keep_name:
+            context.user_data["emp_name"] = keep_name
+        if keep_tg:
+            context.user_data["creator_tg"] = keep_tg
+
+        context.user_data["mode"] = "want_trip"
+
+        if not keep_phone:
+            kb = ReplyKeyboardMarkup(
+                [[KeyboardButton("📞 Поділитися номером", request_contact=True)]],
+                resize_keyboard=True,
+                one_time_keyboard=True
+            )
+            await update.effective_chat.send_message(
+                "📲 Щоб подати заявку «Хочу у відрядження», спочатку поділися своїм номером телефону:",
+                reply_markup=kb
+            )
+            context.user_data["await_want_trip_phone"] = True
+            return
+
+        context.user_data["await"] = "worker_store"
+        await update.effective_message.edit_text(
+            "Вкажіть номер ТТ, де ви працюєте зараз:"
+        )
+        return  
+    
     if data == "menu:mycreated":
         await update.effective_message.edit_text(
             "✅ Кнопку «Створені мною зміни» підключено.\n"
