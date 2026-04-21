@@ -933,6 +933,10 @@ async def handle_create_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text(
             "✅ Зміну створено. Вона з’явиться у списку доступних для бронювання."
         )
+        await update.message.reply_text(
+            "Меню доступне внизу 👇",
+            reply_markup=stable_menu_keyboard()
+        )        
         return 
 
    
