@@ -177,6 +177,53 @@ def is_active_need_request(r: dict) -> bool:
 
     return True
 
+def get_next_requests_row() -> int:
+    """
+    Шукає наступний вільний рядок у Requests не тільки по колонці магазину,
+    бо для заявки "Хочу у відрядження" магазин може бути пустим.
+    """
+    lengths = [
+        len(requests_ws.col_values(COL_STORE)),
+        len(requests_ws.col_values(COL_DATE)),
+        len(requests_ws.col_values(COL_CREATED_TG)),
+        len(requests_ws.col_values(COL_REQUEST_TYPE)),
+    ]
+    return max(lengths) + 1
+
+
+def save_want_trip_request(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    next_row = get_next_requests_row()
+
+    trip_date = context.user_data.get("trip_date", "")
+    try:
+        trip_date_str = datetime.strptime(trip_date, "%Y-%m-%d").strftime("%d.%m.%Y")
+    except Exception:
+        trip_date_str = str(trip_date)
+
+    payload = [
+        {'range': f'D{next_row}:F{next_row}', 'values': [[
+            trip_date_str,
+            context.user_data.get("trip_time_from", ""),
+            context.user_data.get("trip_time_to", "")
+        ]]},
+        {'range': f'I{next_row}:J{next_row}', 'values': [[
+            "",
+            context.user_data.get("trip_comment", "")
+        ]]},
+        {'range': f'K{next_row}:L{next_row}', 'values': [[
+            str(context.user_data.get("creator_tg") or update.effective_user.id),
+            str(context.user_data.get("creator_phone") or "")
+        ]]},
+        {'range': f'R{next_row}:T{next_row}', 'values': [[
+            REQUEST_TYPE_WANT,
+            RECORD_STATE_ACTIVE,
+            context.user_data.get("worker_store", "")
+        ]]},
+    ]
+
+    requests_ws.batch_update(payload)
+    return next_row
+
 # ===================== Утиліти =====================
 def get_store_meta(store_num: str) -> Tuple[str, str, str, str, str]:
     """Повертає (місто, область, адреса, ПІБ_ТМ, Телефон_ТМ) по №_магазину."""
@@ -670,20 +717,22 @@ async def handle_create_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if update.message is None:
         return
     step = context.user_data.get("await")
-    txt = (update.message.text or "").strip()
+    txt = (update.message.text or "").strip()   
     
     if step == "trip_comment":
         context.user_data["trip_comment"] = txt
         context.user_data.pop("await", None)
 
+        save_want_trip_request(update, context)
+
         await update.message.reply_text(
-            "✅ Заявку заповнено.\n"
+            "✅ Заявку збережено.\n"
             f"ТТ працівника: {context.user_data.get('worker_store', '')}\n"
             f"Дата: {datetime.strptime(context.user_data['trip_date'], '%Y-%m-%d').strftime('%d.%m.%Y')}\n"
             f"Час: {context.user_data.get('trip_time_from', '')}–{context.user_data.get('trip_time_to', '')}\n"
             f"Коментар: {context.user_data.get('trip_comment', '')}"
         )
-        return
+        return    
     
     if step == "worker_store":
         worker_store = re.sub(r"\D", "", txt)
@@ -740,9 +789,8 @@ async def handle_create_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
         te    = context.user_data.get("time_end") or ""
         creator_tg    = context.user_data.get("creator_tg") or update.effective_user.id
         creator_phone = context.user_data.get("creator_phone") or ""
-
-        colB = requests_ws.col_values(COL_STORE)
-        next_row = len(colB) + 1
+        
+        next_row = get_next_requests_row()
 
         try:
             d_obj = datetime.strptime(d, "%Y-%m-%d")
@@ -1001,15 +1049,17 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["trip_comment"] = ""
         context.user_data.pop("await", None)
 
+        save_want_trip_request(update, context)
+
         await update.effective_message.edit_text(
-            "✅ Заявку заповнено.\n"
+            "✅ Заявку збережено.\n"
             f"ТТ працівника: {context.user_data.get('worker_store', '')}\n"
             f"Дата: {datetime.strptime(context.user_data['trip_date'], '%Y-%m-%d').strftime('%d.%m.%Y')}\n"
             f"Час: {context.user_data.get('trip_time_from', '')}–{context.user_data.get('trip_time_to', '')}\n"
             "Коментар: —"
         )
         return    
-    
+        
     if data == "menu:create":
         keep_phone = context.user_data.get("creator_phone")
         keep_name  = context.user_data.get("emp_name")
@@ -1282,9 +1332,9 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         needed = int(parts[6]) if len(parts) > 6 and parts[6].isdigit() else 1
 
         # --- визначаємо новий рядок ---
-        colB = requests_ws.col_values(COL_STORE)
-        next_row = len(colB) + 1
-
+      
+        next_row = get_next_requests_row()
+        
         # --- запис усіх основних даних ---
         payload = [
             {'range': f'B{next_row}:B{next_row}', 'values': [[store]]},
