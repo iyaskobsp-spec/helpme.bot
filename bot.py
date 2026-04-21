@@ -672,6 +672,9 @@ async def handle_create_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
     step = context.user_data.get("await")
     txt = (update.message.text or "").strip()
 
+
+
+    
     if step == "worker_store":
         worker_store = re.sub(r"\D", "", txt)
 
@@ -683,7 +686,9 @@ async def handle_create_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
         context.user_data.pop("await", None)
 
         await update.message.reply_text(
-            f"✅ ТТ працівника збережено: {worker_store}"
+            f"✅ ТТ працівника збережено: {worker_store}\n\n"
+            "Оберіть дату, на коли хочете у відрядження:",
+            reply_markup=build_calendar()
         )
         return
         
@@ -1118,12 +1123,24 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Обрана дата → вибір часу початку
     if data.startswith("calpick:"):
-        d = data.split(":",1)[1]
+        d = data.split(":", 1)[1]
+        dd = datetime.strptime(d, "%Y-%m-%d").strftime("%d.%m.%Y")
+
+        if context.user_data.get("mode") == "want_trip":
+            context.user_data["trip_date"] = d
+            await update.effective_message.edit_text(
+                f"✅ Дату для заявки збережено: {dd}"
+            )
+            return
+
         context.user_data["date"] = d
         kb = build_time_picker("tstart", 9, 0, label="Початок")
-        dd = datetime.strptime(d, '%Y-%m-%d').strftime('%d.%m.%Y')
-        await update.effective_message.edit_text(f"Дата: {dd}\nОберіть час початку:", reply_markup=kb)
+        await update.effective_message.edit_text(
+            f"Дата: {dd}\nОберіть час початку:",
+            reply_markup=kb
+        )
         return
+    
 
     # Час початку
     if data.startswith("tstart:"):
