@@ -1572,6 +1572,7 @@ def main():
         port=port,
         url_path=webhook_path,
         webhook_url=webhook_url
+        allowed_updates=Update.ALL_TYPES
     )
 
 
