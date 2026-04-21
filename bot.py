@@ -224,6 +224,46 @@ def save_want_trip_request(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     requests_ws.batch_update(payload)
     return next_row
 
+def get_my_created_records(tg_id: int):
+    rows, _ = get_requests_records(ttl_sec=10)
+    today = today_kyiv()
+    result = []
+
+    for row_idx, r in enumerate(rows, start=2):
+        created_tg = str(r.get("Created_By_TG", "")).strip()
+        if created_tg != str(tg_id):
+            continue
+
+        record_state = str(r.get("Статус_запису", "")).strip()
+        if record_state and record_state != RECORD_STATE_ACTIVE:
+            continue
+
+        date_s = str(r.get("Дата", "")).strip()
+        d = parse_date_flexible(date_s)
+        if not d or d < today:
+            continue
+
+        request_type = str(r.get("Тип_запиту", "")).strip() or REQUEST_TYPE_NEED
+        store = str(r.get("№_магазину", "")).strip()
+        worker_store = str(r.get("ТТ_працівника", "")).strip()
+        time_from = str(r.get("Час_початку", "")).strip()
+        time_to = str(r.get("Час_закінчення", "")).strip()
+        note = str(r.get("Примітки", "")).strip()
+
+        result.append({
+            "row_idx": row_idx,
+            "date_obj": d,
+            "date_str": d.strftime("%d.%m.%Y"),
+            "request_type": request_type,
+            "store": store,
+            "worker_store": worker_store,
+            "time_from": time_from,
+            "time_to": time_to,
+            "note": note,
+        })
+
+    result.sort(key=lambda x: (x["date_obj"], x["time_from"], x["row_idx"]))
+    return result
 # ===================== Утиліти =====================
 def get_store_meta(store_num: str) -> Tuple[str, str, str, str, str]:
     """Повертає (місто, область, адреса, ПІБ_ТМ, Телефон_ТМ) по №_магазину."""
@@ -1043,14 +1083,38 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Вкажіть номер ТТ, де ви працюєте зараз:"
         )
         return  
-    
-    if data == "menu:mycreated":
-        await update.effective_message.edit_text(
-            "✅ Кнопку «Створені мною зміни» підключено.\n"
-            "Наступним кроком додамо список ваших активних записів."
-        )
-        return
 
+    if data == "menu:mycreated":
+        records = get_my_created_records(update.effective_user.id)
+
+        if not records:
+            await update.effective_message.edit_text(
+                "У вас немає активних записів від сьогодні і далі."
+            )
+            return
+
+        lines = []
+        for i, rec in enumerate(records, start=1):
+            if rec["request_type"] == REQUEST_TYPE_WANT:
+                tt_line = f"ТТ працівника: {rec['worker_store'] or '—'}"
+            else:
+                tt_line = f"ТТ: {rec['store'] or '—'}"
+
+            comment_line = f"\nКоментар: {rec['note']}" if rec["note"] else ""
+
+            lines.append(
+                f"{i}. {rec['request_type']}\n"
+                f"Дата: {rec['date_str']}\n"
+                f"Час: {rec['time_from']}–{rec['time_to']}\n"
+                f"{tt_line}"
+                f"{comment_line}"
+            )
+
+        text = "📋 Створені мною активні записи:\n\n" + "\n\n".join(lines[:15])
+
+        await update.effective_message.edit_text(text)
+        return
+    
     if data == "trip_comment_skip":
         context.user_data["trip_comment"] = ""
         context.user_data.pop("await", None)
