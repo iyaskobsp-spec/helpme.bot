@@ -1164,6 +1164,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         comment_line = rec["note"] if rec["note"] else "—"
 
         kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("✏️ Редагувати запис", callback_data=f"editrec:{row_idx}")],
             [InlineKeyboardButton("❌ Скасувати запис", callback_data=f"cancelrec:{row_idx}")],
             [InlineKeyboardButton("⬅️ Назад до списку", callback_data="menu:mycreated")]
         ])
@@ -1178,6 +1179,37 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    if data.startswith("editrec:"):
+        row_idx = int(data.split(":", 1)[1])
+        records = get_my_created_records(update.effective_user.id)
+        rec = next((r for r in records if r["row_idx"] == row_idx), None)
+
+        if not rec:
+            await update.effective_message.edit_text(
+                "Запис не знайдено або він уже неактивний."
+            )
+            return
+
+        buttons = [
+            [InlineKeyboardButton("🗓 Змінити дату", callback_data=f"editrec_date:{row_idx}")],
+            [InlineKeyboardButton("🕒 Змінити час", callback_data=f"editrec_time:{row_idx}")],
+            [InlineKeyboardButton("💬 Змінити коментар", callback_data=f"editrec_note:{row_idx}")]
+        ]
+
+        if rec["request_type"] == REQUEST_TYPE_WANT:
+            buttons.insert(
+                2,
+                [InlineKeyboardButton("🏪 Змінити ТТ працівника", callback_data=f"editrec_worker_store:{row_idx}")]
+            )
+
+        buttons.append([InlineKeyboardButton("⬅️ Назад до запису", callback_data=f"myrec:{row_idx}")])
+
+        await update.effective_message.edit_text(
+            "Що саме хочете змінити?",
+            reply_markup=InlineKeyboardMarkup(buttons)
+        )
+        return
+    
     if data.startswith("cancelrec:"):
         row_idx = int(data.split(":", 1)[1])
         records = get_my_created_records(update.effective_user.id)
