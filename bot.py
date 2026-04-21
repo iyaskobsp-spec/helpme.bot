@@ -1263,6 +1263,26 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    if data.startswith("editrec_date:"):
+        row_idx = int(data.split(":", 1)[1])
+        records = get_my_created_records(update.effective_user.id)
+        rec = next((r for r in records if r["row_idx"] == row_idx), None)
+
+        if not rec:
+            await update.effective_message.edit_text(
+                "Запис не знайдено або він уже неактивний."
+            )
+            return
+
+        context.user_data["edit_mode"] = "date"
+        context.user_data["edit_row_idx"] = row_idx
+
+        await update.effective_message.edit_text(
+            "Оберіть нову дату:",
+            reply_markup=build_calendar()
+        )
+        return    
+
     if data.startswith("editrec_worker_store:"):
         row_idx = int(data.split(":", 1)[1])
         records = get_my_created_records(update.effective_user.id)
@@ -1468,9 +1488,33 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # Обрана дата → вибір часу початку
+
     if data.startswith("calpick:"):
         d = data.split(":", 1)[1]
         dd = datetime.strptime(d, "%Y-%m-%d").strftime("%d.%m.%Y")
+
+        if context.user_data.get("edit_mode") == "date":
+            row_idx = context.user_data.get("edit_row_idx")
+
+            if not row_idx:
+                context.user_data.pop("edit_mode", None)
+                await update.effective_message.edit_text("❌ Не знайдено запис для редагування.")
+                return
+
+            requests_ws.update_cell(row_idx, COL_DATE, dd)
+
+            context.user_data.pop("edit_mode", None)
+            context.user_data.pop("edit_row_idx", None)
+
+            await update.effective_message.edit_text(
+                f"✅ Дату оновлено: {dd}"
+            )
+
+            await update.effective_chat.send_message(
+                "Меню доступне внизу 👇",
+                reply_markup=stable_menu_keyboard()
+            )
+            return
 
         if context.user_data.get("mode") == "want_trip":
             context.user_data["trip_date"] = d
@@ -1487,9 +1531,8 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Дата: {dd}\nОберіть час початку:",
             reply_markup=kb
         )
-        return
-
-    
+        return  
+       
     if data.startswith("trip_from:"):
         _, action, hh, mm = data.split(":")
         h, m = _parse_hm(hh, mm)
