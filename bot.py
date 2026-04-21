@@ -1378,12 +1378,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.effective_message.edit_text(
             "✅ Запис скасовано.\n\n"
             "Він більше не буде показуватись у списку активних записів."
-        )
-
-        await update.effective_chat.send_message(
-            "Меню доступне внизу 👇",
-            reply_markup=stable_menu_keyboard()
-        )
+        )        
         return
     
     if data == "menu:create":
