@@ -1145,7 +1145,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-     if data.startswith("myrec:"):
+    if data.startswith("myrec:"):
         row_idx = int(data.split(":", 1)[1])
         records = get_my_created_records(update.effective_user.id)
         rec = next((r for r in records if r["row_idx"] == row_idx), None)
