@@ -683,7 +683,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     inline_kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("🆕 Створити зміну", callback_data="menu:create")],
         [InlineKeyboardButton("🧳 Хочу у відрядження", callback_data="menu:want_trip")],
-        [InlineKeyboardButton("📋 Створені мною зміни", callback_data="menu:mycreated")],
+        [InlineKeyboardButton("📋 Створені мною записи", callback_data="menu:mycreated")],
         [InlineKeyboardButton("📅 Забронювати зміни", callback_data="menu:book")],
         [InlineKeyboardButton("🗂 Мої відпрацьовані зміни", callback_data="menu:mydone")]
     ])
