@@ -1128,8 +1128,10 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if context.user_data.get("mode") == "want_trip":
             context.user_data["trip_date"] = d
+            kb = build_time_picker("trip_from", 9, 0, label="Час з")
             await update.effective_message.edit_text(
-                f"✅ Дату для заявки збережено: {dd}"
+                f"Дата: {dd}\nОберіть час з:",
+                reply_markup=kb
             )
             return
 
@@ -1140,8 +1142,38 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=kb
         )
         return
-    
 
+    
+    if data.startswith("trip_from:"):
+        _, action, hh, mm = data.split(":")
+        h, m = _parse_hm(hh, mm)
+
+        if action == "inc":
+            h, m = _inc_time(h, m)
+            kb = build_time_picker("trip_from", h, m, label="Час з")
+            await update.effective_message.edit_text(
+                "Оберіть час з:",
+                reply_markup=kb
+            )
+            return
+
+        if action == "dec":
+            h, m = _dec_time(h, m)
+            kb = build_time_picker("trip_from", h, m, label="Час з")
+            await update.effective_message.edit_text(
+                "Оберіть час з:",
+                reply_markup=kb
+            )
+            return
+
+        if action == "ok":
+            context.user_data["trip_time_from"] = _time_to_str(h, m)
+            kb = build_time_picker("trip_to", 18, 0, label="Час по")
+            await update.effective_message.edit_text(
+                f"Час з: {context.user_data['trip_time_from']}\nОберіть час по:",
+                reply_markup=kb
+            )
+            return    
     # Час початку
     if data.startswith("tstart:"):
         _, action, hh, mm = data.split(":")
@@ -1161,6 +1193,37 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # Час кінця
+    if data.startswith("trip_to:"):
+        _, action, hh, mm = data.split(":")
+        h, m = _parse_hm(hh, mm)
+
+        if action == "inc":
+            h, m = _inc_time(h, m)
+            kb = build_time_picker("trip_to", h, m, label="Час по")
+            await update.effective_message.edit_text(
+                "Оберіть час по:",
+                reply_markup=kb
+            )
+            return
+
+        if action == "dec":
+            h, m = _dec_time(h, m)
+            kb = build_time_picker("trip_to", h, m, label="Час по")
+            await update.effective_message.edit_text(
+                "Оберіть час по:",
+                reply_markup=kb
+            )
+            return
+
+        if action == "ok":
+            context.user_data["trip_time_to"] = _time_to_str(h, m)
+            await update.effective_message.edit_text(
+                "✅ Час для заявки збережено.\n"
+                f"Дата: {datetime.strptime(context.user_data['trip_date'], '%Y-%m-%d').strftime('%d.%m.%Y')}\n"
+                f"Час: {context.user_data['trip_time_from']}–{context.user_data['trip_time_to']}"
+            )
+            return
+    
     if data.startswith("tend:"):
         _, action, hh, mm = data.split(":")
         h, m = _parse_hm(hh, mm)
