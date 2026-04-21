@@ -225,30 +225,36 @@ def save_want_trip_request(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     return next_row
 
 def get_my_created_records(tg_id: int):
-    rows, _ = get_requests_records(ttl_sec=10)
+    rows = requests_ws.get_all_values()
     today = today_kyiv()
     result = []
 
-    for row_idx, r in enumerate(rows, start=2):
-        created_tg = str(r.get("Created_By_TG", "")).strip()
+    for row_idx, row in enumerate(rows[1:], start=2):  # без заголовка
+        while len(row) < COL_WORKER_STORE:
+            row.append("")
+
+        created_tg = str(row[COL_CREATED_TG - 1]).strip()
         if created_tg != str(tg_id):
             continue
 
-        record_state = str(r.get("Статус_запису", "")).strip()
+        record_state = str(row[COL_RECORD_STATE - 1]).strip()
         if record_state and record_state != RECORD_STATE_ACTIVE:
             continue
 
-        date_s = str(r.get("Дата", "")).strip()
+        date_s = str(row[COL_DATE - 1]).strip()
         d = parse_date_flexible(date_s)
         if not d or d < today:
             continue
 
-        request_type = str(r.get("Тип_запиту", "")).strip() or REQUEST_TYPE_NEED
-        store = str(r.get("№_магазину", "")).strip()
-        worker_store = str(r.get("ТТ_працівника", "")).strip()
-        time_from = str(r.get("Час_початку", "")).strip()
-        time_to = str(r.get("Час_закінчення", "")).strip()
-        note = str(r.get("Примітки", "")).strip()
+        request_type = str(row[COL_REQUEST_TYPE - 1]).strip()
+        store = str(row[COL_STORE - 1]).strip()
+        worker_store = str(row[COL_WORKER_STORE - 1]).strip()
+        time_from = str(row[COL_TIME_FROM - 1]).strip()
+        time_to = str(row[COL_TIME_TO - 1]).strip()
+        note = str(row[COL_NOTE - 1]).strip()
+
+        if not request_type:
+            request_type = REQUEST_TYPE_NEED if store else REQUEST_TYPE_WANT
 
         result.append({
             "row_idx": row_idx,
@@ -264,6 +270,8 @@ def get_my_created_records(tg_id: int):
 
     result.sort(key=lambda x: (x["date_obj"], x["time_from"], x["row_idx"]))
     return result
+
+
 # ===================== Утиліти =====================
 def get_store_meta(store_num: str) -> Tuple[str, str, str, str, str]:
     """Повертає (місто, область, адреса, ПІБ_ТМ, Телефон_ТМ) по №_магазину."""
