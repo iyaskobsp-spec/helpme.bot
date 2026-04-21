@@ -692,6 +692,7 @@ async def handle_create_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
             {'range': f'D{next_row}:G{next_row}', 'values': [[d_str, ts, te, needed]]},
             {'range': f'I{next_row}:I{next_row}', 'values': [[STATUS_PENDING]]},
             {'range': f'K{next_row}:L{next_row}', 'values': [[str(creator_tg), str(creator_phone)]]},
+            {'range': f'R{next_row}:T{next_row}', 'values': [[REQUEST_TYPE_NEED, RECORD_STATE_ACTIVE, ""]]},
         ]
         requests_ws.batch_update(payload)
 
@@ -1094,7 +1095,8 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             {'range': f'K{next_row}:L{next_row}', 'values': [[
                 str(context.user_data.get("creator_tg") or update.effective_user.id),
                 str(context.user_data.get("creator_phone") or "")
-            ]]}
+            ]]},
+            {'range': f'R{next_row}:T{next_row}', 'values': [[REQUEST_TYPE_NEED, RECORD_STATE_ACTIVE, ""]]},
         ]
         requests_ws.batch_update(payload)
 
