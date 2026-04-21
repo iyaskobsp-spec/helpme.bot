@@ -936,6 +936,7 @@ def persistent_menu():
 # ===================== Callback =====================
 async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
+    await query.answer()
     data = query.data
       
     
