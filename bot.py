@@ -890,13 +890,26 @@ async def handle_create_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
             await update.message.reply_text("❗ Введи додатне ціле число (наприклад, 1 або 2).")
             return
 
+        context.user_data["needed"] = needed
+        context.user_data["await"] = "create_comment"
+
+        await update.message.reply_text(
+            "✍️ Введіть коментар до зміни.\n\n"
+            "Якщо коментар не потрібен, надішліть: -"
+        )
+        return
+
+    if step == "create_comment":
+        note = "" if txt in ("-", "—") else txt
+
         store = context.user_data.get("store_num") or ""
-        d     = context.user_data.get("date") or ""          # YYYY-MM-DD
+        d     = context.user_data.get("date") or ""
         ts    = context.user_data.get("time_start") or ""
         te    = context.user_data.get("time_end") or ""
+        needed = context.user_data.get("needed") or 1
         creator_tg    = context.user_data.get("creator_tg") or update.effective_user.id
         creator_phone = context.user_data.get("creator_phone") or ""
-        
+
         next_row = get_next_requests_row()
 
         try:
@@ -908,19 +921,21 @@ async def handle_create_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
         payload = [
             {'range': f'B{next_row}:B{next_row}', 'values': [[store]]},
             {'range': f'D{next_row}:G{next_row}', 'values': [[d_str, ts, te, needed]]},
-            {'range': f'I{next_row}:I{next_row}', 'values': [[STATUS_PENDING]]},
+            {'range': f'I{next_row}:J{next_row}', 'values': [[STATUS_PENDING, note]]},
             {'range': f'K{next_row}:L{next_row}', 'values': [[str(creator_tg), str(creator_phone)]]},
             {'range': f'R{next_row}:T{next_row}', 'values': [[REQUEST_TYPE_NEED, RECORD_STATE_ACTIVE, ""]]},
         ]
         requests_ws.batch_update(payload)
 
-        for k in ("await","date","time_start","time_end","store_num"):
+        for k in ("await", "date", "time_start", "time_end", "store_num", "needed"):
             context.user_data.pop(k, None)
 
-        await update.message.reply_text("✅ Зміну створено. Вона з’явиться у списку доступних для бронювання.")
+        await update.message.reply_text(
+            "✅ Зміну створено. Вона з’явиться у списку доступних для бронювання."
+        )
+        return 
 
-        return
-
+   
 # ===================== Допоміжні дії =====================
 async def show_my_attendance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     phone = context.user_data.get("creator_phone","")
