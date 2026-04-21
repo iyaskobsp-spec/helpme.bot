@@ -114,11 +114,21 @@ COL_CREATED_PH  = 12  # L
 COL_BOOKED_PH   = 13  # M (номери працівників через кому)
 COL_BOOKED_NAME = 14  # N (ПІБ працівників через кому)
 COL_ARRIVED     = 15  # O ("Так" якщо підтвердили прибуття)
+COL_TM_NAME       = 16  # P ПІБ_ТМ
+COL_TM_PHONE      = 17  # Q Телефон_ТМ
+COL_REQUEST_TYPE  = 18  # R Тип_запиту
+COL_RECORD_STATE  = 19  # S Статус_запису
+COL_WORKER_STORE  = 20  # T ТТ_працівника
 
 STATUS_PENDING   = "Pending"
 STATUS_WAIT      = "Очікує підтвердження"
 STATUS_CONFIRMED = "Підтверджено"
 
+REQUEST_TYPE_NEED = "Потреба у відрядженні"
+REQUEST_TYPE_WANT = "Хочу у відрядження"
+
+RECORD_STATE_ACTIVE    = "Активний"
+RECORD_STATE_CANCELLED = "Скасовано"
 # ===================== Кеші =====================
 _REQ_CACHE = {"ts": 0.0, "rows": []}
 _STORE_CACHE = {"ts": 0.0, "rows": []}
