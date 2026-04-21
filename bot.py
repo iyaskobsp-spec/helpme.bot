@@ -2125,11 +2125,18 @@ async def job_ask_arrival(context: ContextTypes.DEFAULT_TYPE):
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     import traceback
-    print("========== ERROR START ==========")
-    print(f"update = {update}")
-    print("".join(traceback.format_exception(None, context.error, context.error.__traceback__)))
-    print("=========== ERROR END ===========")
 
+    err_text = str(context.error)
+
+    if "Message is not modified" in err_text:
+        print("[debug] harmless telegram error: Message is not modified", flush=True)
+        return
+
+    print("========== ERROR START ==========", flush=True)
+    print(f"update = {update}", flush=True)
+    print("".join(traceback.format_exception(None, context.error, context.error.__traceback__)), flush=True)
+    print("=========== ERROR END ===========", flush=True)
+    
 def main():
     app = Application.builder().token(TELEGRAM_TOKEN).build()
 
