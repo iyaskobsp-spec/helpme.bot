@@ -767,6 +767,35 @@ async def handle_create_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
     step = context.user_data.get("await")
     txt = (update.message.text or "").strip()
 
+    if step == "edit_worker_store":
+        row_idx = context.user_data.get("edit_row_idx")
+
+        if not row_idx:
+            context.user_data.pop("await", None)
+            await update.message.reply_text("❌ Не знайдено запис для редагування.")
+            return
+
+        new_worker_store = re.sub(r"\D", "", txt)
+
+        if not new_worker_store:
+            await update.message.reply_text("Вкажіть номер ТТ цифрами, наприклад: 054")
+            return
+
+        requests_ws.update_cell(row_idx, COL_WORKER_STORE, new_worker_store)
+
+        context.user_data.pop("await", None)
+        context.user_data.pop("edit_row_idx", None)
+
+        await update.message.reply_text(
+            f"✅ ТТ працівника оновлено: {new_worker_store}"
+        )
+
+        await update.message.reply_text(
+            "Меню доступне внизу 👇",
+            reply_markup=stable_menu_keyboard()
+        )
+        return    
+
     if step == "edit_note":
         row_idx = context.user_data.get("edit_row_idx")
 
@@ -1234,6 +1263,32 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    if data.startswith("editrec_worker_store:"):
+        row_idx = int(data.split(":", 1)[1])
+        records = get_my_created_records(update.effective_user.id)
+        rec = next((r for r in records if r["row_idx"] == row_idx), None)
+
+        if not rec:
+            await update.effective_message.edit_text(
+                "Запис не знайдено або він уже неактивний."
+            )
+            return
+
+        if rec["request_type"] != REQUEST_TYPE_WANT:
+            await update.effective_message.edit_text(
+                "Ця зміна доступна тільки для записів «Хочу у відрядження»."
+            )
+            return
+
+        context.user_data["await"] = "edit_worker_store"
+        context.user_data["edit_row_idx"] = row_idx
+
+        await update.effective_message.edit_text(
+            "Введіть новий номер ТТ працівника цифрами.\n\n"
+            "Наприклад: 054"
+        )
+        return
+    
     if data.startswith("editrec_note:"):
         row_idx = int(data.split(":", 1)[1])
         records = get_my_created_records(update.effective_user.id)
