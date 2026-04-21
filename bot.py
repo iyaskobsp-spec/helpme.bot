@@ -158,6 +158,25 @@ def safe_stores_records():
     except Exception as e:
         return [], str(e)
 
+def is_active_need_request(r: dict) -> bool:
+    """
+    Для поточної логіки бронювання беремо тільки:
+    - Потреба у відрядженні
+    - Активний
+
+    Старі рядки без нових колонок теж пропускаємо, щоб нічого не поламати.
+    """
+    request_type = str(r.get("Тип_запиту", "")).strip()
+    record_state = str(r.get("Статус_запису", "")).strip()
+
+    if request_type and request_type != REQUEST_TYPE_NEED:
+        return False
+
+    if record_state and record_state != RECORD_STATE_ACTIVE:
+        return False
+
+    return True
+
 # ===================== Утиліти =====================
 def get_store_meta(store_num: str) -> Tuple[str, str, str, str, str]:
     """Повертає (місто, область, адреса, ПІБ_ТМ, Телефон_ТМ) по №_магазину."""
@@ -354,6 +373,9 @@ def build_shifts_keyboard_by_city(city: str, days_ahead: Optional[int] = None):
     items: List[Tuple[int, date, str]] = []  # (row_idx, date, label)
 
     for idx, r in enumerate(rows, start=2):
+        if not is_active_need_request(r):
+            continue
+            
         store = str(r.get("№_магазину","")).strip()
         if not store:
             continue
@@ -467,6 +489,9 @@ def build_booking_calendar(city: str, year: int = None, month: int = None):
 
     available_dates = set()
     for r in rows:
+        if not is_active_need_request(r):
+            continue
+            
         store = str(r.get("№_магазину","")).strip()
         r_city = (str(r.get("Місто","")).strip() or city_map.get(store, ""))
 
@@ -1131,6 +1156,9 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # шукаємо всі зміни на обрану дату
         avail = []
         for idx, r in enumerate(rows, start=2):
+            if not is_active_need_request(r):
+                continue
+                
             store = str(r.get("№_магазину","")).strip()
             r_city = (str(r.get("Місто","")).strip() or city_map.get(store, ""))
 
