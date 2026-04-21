@@ -1164,6 +1164,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         comment_line = rec["note"] if rec["note"] else "—"
 
         kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("❌ Скасувати запис", callback_data=f"cancelrec:{row_idx}")],
             [InlineKeyboardButton("⬅️ Назад до списку", callback_data="menu:mycreated")]
         ])
 
@@ -1176,7 +1177,31 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=kb
         )
         return
-         
+
+    if data.startswith("cancelrec:"):
+        row_idx = int(data.split(":", 1)[1])
+        records = get_my_created_records(update.effective_user.id)
+        rec = next((r for r in records if r["row_idx"] == row_idx), None)
+
+        if not rec:
+            await update.effective_message.edit_text(
+                "Запис не знайдено або він уже неактивний."
+            )
+            return
+
+        requests_ws.update_cell(row_idx, COL_RECORD_STATE, RECORD_STATE_CANCELLED)
+
+        await update.effective_message.edit_text(
+            "✅ Запис скасовано.\n\n"
+            "Він більше не буде показуватись у списку активних записів."
+        )
+
+        await update.effective_chat.send_message(
+            "Меню доступне внизу 👇",
+            reply_markup=stable_menu_keyboard()
+        )
+        return
+    
     if data == "menu:create":
         keep_phone = context.user_data.get("creator_phone")
         keep_name  = context.user_data.get("emp_name")
