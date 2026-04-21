@@ -1090,7 +1090,7 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.effective_message.edit_text(
             "Вкажіть номер ТТ, де ви працюєте зараз:"
         )
-        return  
+        return
 
     if data == "menu:mycreated":
         records = get_my_created_records(update.effective_user.id)
@@ -1101,27 +1101,29 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        lines = []
-        for i, rec in enumerate(records, start=1):
+        buttons = []
+        for i, rec in enumerate(records[:20], start=1):
             if rec["request_type"] == REQUEST_TYPE_WANT:
-                tt_line = f"ТТ працівника: {rec['worker_store'] or '—'}"
+                tt_part = f"ТТ працівника {rec['worker_store'] or '—'}"
             else:
-                tt_line = f"ТТ: {rec['store'] or '—'}"
+                tt_part = f"ТТ {rec['store'] or '—'}"
 
-            comment_line = f"\nКоментар: {rec['note']}" if rec["note"] else ""
-
-            lines.append(
-                f"{i}. {rec['request_type']}\n"
-                f"Дата: {rec['date_str']}\n"
-                f"Час: {rec['time_from']}–{rec['time_to']}\n"
-                f"{tt_line}"
-                f"{comment_line}"
+            btn_text = (
+                f"{i}. {rec['date_str']} {rec['time_from']}-{rec['time_to']} | {tt_part}"
             )
 
-        text = "📋 Створені мною активні записи:\n\n" + "\n\n".join(lines[:15])
+            buttons.append([
+                InlineKeyboardButton(
+                    btn_text[:64],
+                    callback_data=f"myrec:{rec['row_idx']}"
+                )
+            ])
 
-        await update.effective_message.edit_text(text)
-        return
+        await update.effective_message.edit_text(
+            "📋 Оберіть запис:",
+            reply_markup=InlineKeyboardMarkup(buttons)
+        )
+        return  
     
     if data == "trip_comment_skip":
         context.user_data["trip_comment"] = ""
@@ -1143,7 +1145,38 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-        
+     if data.startswith("myrec:"):
+        row_idx = int(data.split(":", 1)[1])
+        records = get_my_created_records(update.effective_user.id)
+        rec = next((r for r in records if r["row_idx"] == row_idx), None)
+
+        if not rec:
+            await update.effective_message.edit_text(
+                "Запис не знайдено або він уже неактивний."
+            )
+            return
+
+        if rec["request_type"] == REQUEST_TYPE_WANT:
+            tt_line = f"ТТ працівника: {rec['worker_store'] or '—'}"
+        else:
+            tt_line = f"ТТ: {rec['store'] or '—'}"
+
+        comment_line = rec["note"] if rec["note"] else "—"
+
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("⬅️ Назад до списку", callback_data="menu:mycreated")]
+        ])
+
+        await update.effective_message.edit_text(
+            f"📌 {rec['request_type']}\n"
+            f"Дата: {rec['date_str']}\n"
+            f"Час: {rec['time_from']}–{rec['time_to']}\n"
+            f"{tt_line}\n"
+            f"Коментар: {comment_line}",
+            reply_markup=kb
+        )
+        return
+         
     if data == "menu:create":
         keep_phone = context.user_data.get("creator_phone")
         keep_name  = context.user_data.get("emp_name")
