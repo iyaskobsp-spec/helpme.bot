@@ -718,7 +718,8 @@ async def handle_create_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
     step = context.user_data.get("await")
     txt = (update.message.text or "").strip()   
-    
+  
+
     if step == "trip_comment":
         context.user_data["trip_comment"] = txt
         context.user_data.pop("await", None)
@@ -732,7 +733,12 @@ async def handle_create_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
             f"Час: {context.user_data.get('trip_time_from', '')}–{context.user_data.get('trip_time_to', '')}\n"
             f"Коментар: {context.user_data.get('trip_comment', '')}"
         )
-        return    
+
+        await update.message.reply_text(
+            "Меню доступне внизу 👇",
+            reply_markup=stable_menu_keyboard()
+        )
+        return
     
     if step == "worker_store":
         worker_store = re.sub(r"\D", "", txt)
@@ -1058,7 +1064,13 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Час: {context.user_data.get('trip_time_from', '')}–{context.user_data.get('trip_time_to', '')}\n"
             "Коментар: —"
         )
-        return    
+
+        await update.effective_chat.send_message(
+            "Меню доступне внизу 👇",
+            reply_markup=stable_menu_keyboard()
+        )
+        return
+
         
     if data == "menu:create":
         keep_phone = context.user_data.get("creator_phone")
