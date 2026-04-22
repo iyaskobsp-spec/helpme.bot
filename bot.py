@@ -244,7 +244,7 @@ async def send_hr_channel_notification(
         if request_type == REQUEST_TYPE_WANT:
             tt_line = f"ТТ працівника: {worker_store or '—'}"
         else:
-            tt_line = f"ТТ магазину: {store or '—'}"
+            tt_line = f"№ магазину: {store or '—'}"
 
         text = (
             f"🔔 Новий запис\n"
