@@ -230,6 +230,38 @@ def save_want_trip_request(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     requests_ws.batch_update(payload)
     return next_row
 
+async def send_hr_channel_notification(
+    context: ContextTypes.DEFAULT_TYPE,
+    request_type: str,
+    date_str: str,
+    time_from: str,
+    time_to: str,
+    store: str = "",
+    worker_store: str = "",
+    note: str = ""
+):
+    try:
+        if request_type == REQUEST_TYPE_WANT:
+            tt_line = f"ТТ працівника: {worker_store or '—'}"
+        else:
+            tt_line = f"ТТ магазину: {store or '—'}"
+
+        text = (
+            f"🔔 Новий запис\n"
+            f"Тип: {request_type}\n"
+            f"Дата: {date_str}\n"
+            f"Час: {time_from}–{time_to}\n"
+            f"{tt_line}\n"
+            f"Коментар: {note or '—'}"
+        )
+
+        await context.bot.send_message(
+            chat_id=HR_CHANNEL_CHAT_ID,
+            text=text
+        )
+    except Exception as e:
+        print(f"[debug] HR channel notify error: {e}", flush=True)
+
 def get_my_created_records(tg_id: int):
     rows = requests_ws.get_all_values()
     today = today_kyiv()
@@ -833,6 +865,16 @@ async def handle_create_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
         save_want_trip_request(update, context)
 
+        await send_hr_channel_notification(
+            context=context,
+            request_type=REQUEST_TYPE_WANT,
+            date_str=datetime.strptime(context.user_data['trip_date'], '%Y-%m-%d').strftime('%d.%m.%Y'),
+            time_from=context.user_data.get("trip_time_from", ""),
+            time_to=context.user_data.get("trip_time_to", ""),
+            worker_store=context.user_data.get("worker_store", ""),
+            note=context.user_data.get("trip_comment", "")
+        )        
+
         await update.message.reply_text(
             "✅ Заявку збережено.\n"
             f"ТТ працівника: {context.user_data.get('worker_store', '')}\n"
@@ -932,6 +974,16 @@ async def handle_create_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
             {'range': f'R{next_row}:T{next_row}', 'values': [[REQUEST_TYPE_NEED, RECORD_STATE_ACTIVE, ""]]},
         ]
         requests_ws.batch_update(payload)
+
+        await send_hr_channel_notification(
+            context=context,
+            request_type=REQUEST_TYPE_NEED,
+            date_str=d_str,
+            time_from=ts,
+            time_to=te,
+            store=store,
+            note=note
+        )        
 
         for k in ("await", "date", "time_start", "time_end", "store_num", "needed"):
             context.user_data.pop(k, None)
@@ -1208,6 +1260,16 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data.pop("await", None)
 
         save_want_trip_request(update, context)
+
+        await send_hr_channel_notification(
+            context=context,
+            request_type=REQUEST_TYPE_WANT,
+            date_str=datetime.strptime(context.user_data['trip_date'], '%Y-%m-%d').strftime('%d.%m.%Y'),
+            time_from=context.user_data.get("trip_time_from", ""),
+            time_to=context.user_data.get("trip_time_to", ""),
+            worker_store=context.user_data.get("worker_store", ""),
+            note=""
+        )        
 
         await update.effective_message.edit_text(
             "✅ Заявку збережено.\n"
