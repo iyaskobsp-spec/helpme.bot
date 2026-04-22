@@ -18,7 +18,7 @@ from telegram import (
 )
 from telegram.ext import (
     Application, CommandHandler, ContextTypes, CallbackQueryHandler,
-    MessageHandler, filters
+    MessageHandler, TypeHandler, filters
 )
 from telegram.error import Forbidden, BadRequest, TelegramError
 
@@ -2157,7 +2157,7 @@ def main():
     app.add_handler(CallbackQueryHandler(on_callback))
     app.add_handler(MessageHandler(filters.CONTACT, on_contact_create))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_create_text))
-    app.add_handler(MessageHandler(filters.ALL & filters.ChatType.CHANNEL, debug_channel_post))
+    app.add_handler(TypeHandler(Update, debug_channel_post), group=99)
     app.add_error_handler(error_handler)
 
     # Persistent JobQueue
