@@ -32,6 +32,9 @@ load_dotenv()
 # Токен Telegram
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
+# Username бота для кнопки "Перейти в бот"
+BOT_USERNAME = os.getenv("BOT_USERNAME", "").strip()
+
 # Chat ID каналу для HR-сповіщень
 HR_CHANNEL_CHAT_ID = os.getenv("HR_CHANNEL_CHAT_ID", "").strip()
 
@@ -71,6 +74,9 @@ if not WEBHOOK_HOST:
 
 if not HR_CHANNEL_CHAT_ID:
     raise RuntimeError("❌ Missing HR_CHANNEL_CHAT_ID in .env")
+
+if not BOT_USERNAME:
+    raise RuntimeError("❌ Missing BOT_USERNAME in .env")
 
 # ===================== GOOGLE SHEETS =====================
 SCOPES = [
@@ -255,9 +261,14 @@ async def send_hr_channel_notification(
             f"Коментар: {note or '—'}"
         )
 
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("Перейти в бот", url=f"https://t.me/{BOT_USERNAME}")]
+        ])
+
         await context.bot.send_message(
             chat_id=HR_CHANNEL_CHAT_ID,
-            text=text
+            text=text,
+            reply_markup=kb
         )
     except Exception as e:
         print(f"[debug] HR channel notify error: {e}", flush=True)
