@@ -2136,6 +2136,14 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     print(f"update = {update}", flush=True)
     print("".join(traceback.format_exception(None, context.error, context.error.__traceback__)), flush=True)
     print("=========== ERROR END ===========", flush=True)
+
+
+
+
+async def debug_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.channel_post:
+        print(f"[debug] channel_chat_id = {update.channel_post.chat.id}", flush=True)
+        print(f"[debug] channel_title = {update.channel_post.chat.title}", flush=True)
     
 def main():
     app = Application.builder().token(TELEGRAM_TOKEN).build()
@@ -2149,6 +2157,7 @@ def main():
     app.add_handler(CallbackQueryHandler(on_callback))
     app.add_handler(MessageHandler(filters.CONTACT, on_contact_create))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_create_text))
+    app.add_handler(MessageHandler(filters.ALL & filters.ChatType.CHANNEL, debug_channel_post))
     app.add_error_handler(error_handler)
 
     # Persistent JobQueue
