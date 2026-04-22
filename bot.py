@@ -32,6 +32,9 @@ load_dotenv()
 # Токен Telegram
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
+# Chat ID каналу для HR-сповіщень
+HR_CHANNEL_CHAT_ID = os.getenv("HR_CHANNEL_CHAT_ID", "").strip()
+
 # Назва таблиці в Google Sheets
 SPREADSHEET_NAME = os.getenv("GOOGLE_SHEETS_SPREADSHEET_NAME", "BusinessTrip_forBot")
 
@@ -65,6 +68,9 @@ if not TELEGRAM_TOKEN:
 
 if not WEBHOOK_HOST:
     raise RuntimeError("❌ Missing WEBHOOK_HOST in .env (наприклад https://myapp.up.railway.app)")
+
+if not HR_CHANNEL_CHAT_ID:
+    raise RuntimeError("❌ Missing HR_CHANNEL_CHAT_ID in .env")
 
 # ===================== GOOGLE SHEETS =====================
 SCOPES = [
