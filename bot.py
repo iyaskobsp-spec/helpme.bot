@@ -281,9 +281,13 @@ def get_my_created_records(tg_id: int):
     for row_idx, row in enumerate(rows[1:], start=2):  # без заголовка
         while len(row) < COL_WORKER_STORE:
             row.append("")
-
+        
         created_tg = str(row[COL_CREATED_TG - 1]).strip()
-        if created_tg != str(tg_id):
+
+        booked_raw = str(row[COL_BOOKED - 1]).strip()
+        booked_ids = [x.strip() for x in booked_raw.split(",") if x.strip()]
+
+        if created_tg != str(tg_id) and str(tg_id) not in booked_ids:
             continue
 
         record_state = str(row[COL_RECORD_STATE - 1]).strip()
