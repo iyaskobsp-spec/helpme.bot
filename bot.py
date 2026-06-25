@@ -1067,18 +1067,18 @@ async def complete_booking_after_data(update: Update, context: ContextTypes.DEFA
     tg_id = str(update.effective_user.id)
 
     if tg_id in booked_ids:
-        await update.message.reply_text("ℹ️ Ти вже бронював(ла) цю зміну.")
+        await update.effective_chat.send_message("ℹ️ Ти вже бронював(ла) цю зміну.")
         return
 
     if len(booked_ids) >= needed:
-        await update.message.reply_text("❗ На жаль, усі місця на цю зміну вже заброньовані.")
+        await update.effective_chat.send_message("❗ На жаль, усі місця на цю зміну вже заброньовані.")
         return
 
     emp_name = context.user_data.get("emp_name")
     if not emp_name:
         context.user_data["pending_book_row"] = row_idx
         context.user_data["await"] = "emp_name"
-        await update.message.reply_text("Вкажіть ПІБ у форматі: Прізвище Ім’я")
+        await update.effective_chat.send_message("Вкажіть ПІБ у форматі: Прізвище Ім’я")
         return
 
     # запис у таблицю
@@ -1108,7 +1108,7 @@ async def complete_booking_after_data(update: Update, context: ContextTypes.DEFA
     # Адреса завжди повністю з таблиці Stores!
     address = meta_addr
 
-    await update.message.reply_text(
+    await update.effective_chat.send_message(
         "✅ Твоє бронювання збережено.\n"
         f"Місто: {city}\n"
         f"Адреса: {address}\n"
